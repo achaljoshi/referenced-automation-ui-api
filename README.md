@@ -4,7 +4,7 @@ Composes [`referenced-automation-ui`](../referenced-automation-ui), [`referenced
 
 ## Why this repo is almost entirely glue
 
-Both dependencies are complete on their own (`BasePage` for UI, `ApiClient` for API). Neither needs anything from this repo to work - what only exists here is the proof that combining them is straightforward, plus the pattern for doing it correctly.
+Both dependencies are complete on their own (the `actions` layer for UI, `ApiClient` for API). Neither needs anything from this repo to work - what only exists here is the proof that combining them is straightforward, plus the pattern for doing it correctly.
 
 ## Sharing a session between an API step and a UI step
 
@@ -44,7 +44,7 @@ npm test
 }
 ```
 
-Then write page objects on `BasePage` and API calls on `ApiClient` exactly as documented in each of those repos' READMEs - this repo adds nothing to their APIs, it only demonstrates using both at once.
+Then write page objects as factory functions on top of `actions` and API calls on `ApiClient` exactly as documented in each of those repos' READMEs - this repo adds nothing to their APIs, it only demonstrates using both at once.
 
 ## Environments
 

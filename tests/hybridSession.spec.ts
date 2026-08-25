@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { ApiClient } from '@automation/referenced-automation-api';
 import { startAuthServer, stopAuthServer, type AuthServerHandle } from './support/authServer';
-import { DashboardPage } from './support/DashboardPage';
+import { createDashboardPage } from './support/DashboardPage';
 
 let server: AuthServerHandle;
 
@@ -24,7 +24,7 @@ test.describe('hybrid identity - one login, two frameworks', () => {
     });
     loginResponse.expectStatus(200).expectValue('user', 'ada');
 
-    const dashboard = new DashboardPage(page);
+    const dashboard = createDashboardPage(page);
     await dashboard.goto(`${server.baseUrl}/dashboard.html`);
     expect(await dashboard.isWelcomeShown()).toBe(true);
     expect(await dashboard.isAnonymousShown()).toBe(false);
@@ -33,7 +33,7 @@ test.describe('hybrid identity - one login, two frameworks', () => {
   test('without logging in via the API, the UI shows the anonymous state @regression', async ({
     page,
   }) => {
-    const dashboard = new DashboardPage(page);
+    const dashboard = createDashboardPage(page);
     await dashboard.goto(`${server.baseUrl}/dashboard.html`);
     expect(await dashboard.isAnonymousShown()).toBe(true);
     expect(await dashboard.isWelcomeShown()).toBe(false);
@@ -46,7 +46,7 @@ test.describe('hybrid identity - one login, two frameworks', () => {
     });
     expect(loginResponse.status()).toBe(401);
 
-    const dashboard = new DashboardPage(page);
+    const dashboard = createDashboardPage(page);
     await dashboard.goto(`${server.baseUrl}/dashboard.html`);
     expect(await dashboard.isAnonymousShown()).toBe(true);
   });
