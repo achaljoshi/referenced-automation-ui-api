@@ -31,6 +31,8 @@ No `document.cookie` scripting, no `context.addCookies()` bookkeeping - the sess
 npm test
 ```
 
+`setup.sh`/`setup.bat` work from a completely fresh clone of the whole repo family, in any order: this repo depends on `referenced-automation-utils`, `referenced-automation-api`, and `referenced-automation-ui`, so setup builds whichever of their tarballs don't already exist in `../shared-packages` automatically, from `../referenced-automation-utils`, `../referenced-automation-api`, `../referenced-automation-ui` in that order (cloning nothing on its own - those sibling repos must already be checked out next to this one).
+
 ## Using this pattern in your own project
 
 ```jsonc
