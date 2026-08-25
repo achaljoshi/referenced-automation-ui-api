@@ -1,0 +1,33 @@
+{
+  "name": "@automation/referenced-automation-ui-api",
+  "version": "1.0.0",
+  "description": "Composes referenced-automation-ui, referenced-automation-api, and referenced-automation-utils as plain npm dependencies - zero duplicated framework code. This repo is almost entirely glue: page objects, a tiny sample server, and specs proving both frameworks work together in one test, including sharing session state (a cookie/token) between an API-driven step and a UI step.",
+  "license": "UNLICENSED",
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "lint": "eslint . --ext .ts",
+    "test": "playwright test",
+    "test:smoke": "playwright test --grep @smoke",
+    "test:regression": "playwright test --grep @regression",
+    "install:browsers": "playwright install --with-deps chromium firefox webkit"
+  },
+  "dependencies": {
+    "@automation/referenced-automation-api": "file:../shared-packages/automation-referenced-automation-api-1.0.0.tgz",
+    "@automation/referenced-automation-ui": "file:../shared-packages/automation-referenced-automation-ui-1.0.0.tgz",
+    "@automation/referenced-automation-utils": "file:../shared-packages/automation-referenced-automation-utils-1.0.0.tgz"
+  },
+  "overrides": {
+    "uuid": "^11.1.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.1",
+    "@types/node": "^22.10.5",
+    "@typescript-eslint/eslint-plugin": "^8.19.1",
+    "@typescript-eslint/parser": "^8.19.1",
+    "eslint": "^8.57.1",
+    "typescript": "^5.7.3"
+  }
+}
