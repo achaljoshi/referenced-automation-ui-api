@@ -1,6 +1,6 @@
 # referenced-automation-ui-api
 
-Composes [`referenced-automation-ui`](../referenced-automation-ui), [`referenced-automation-api`](../referenced-automation-api), and [`referenced-automation-utils`](../referenced-automation-utils) as plain npm dependencies - **zero duplicated framework code**. This repo's only original content is glue: a tiny sample server, a page object, and specs proving both frameworks work together in one test - including sharing session state between an API-driven step and a UI step, with no manual token copy-pasting.
+Composes [`referenced-automation-ui`](../referenced-automation-ui), [`referenced-automation-api`](../referenced-automation-api), and [`referenced-automation-utils`](../referenced-automation-utils) as plain npm dependencies - **zero duplicated framework code**. This repo's only original content is glue: a tiny sample server, a page object, and specs proving both frameworks work together in one test - including sharing session state between an API-driven step and a UI step with no manual token copy-pasting, and mocking a UI page's runtime API data with a helper imported from the API package.
 
 ## Why this repo is almost entirely glue
 
@@ -23,6 +23,23 @@ test('an API-issued session cookie is honoured by the UI', async ({ page, contex
 ```
 
 No `document.cookie` scripting, no `context.addCookies()` bookkeeping - the session genuinely is one session, not two synchronised ones. See `tests/hybridSession.spec.ts` for the full working example (including the negative cases: no login → anonymous state, failed login → no session granted).
+
+## Mocking a UI page's runtime API data
+
+`referenced-automation-api` exports `mockApiRoute`, a wrapper around Playwright's own `page.route()` - built there so it's one `import` away from any UI project, including this one:
+
+```ts
+import { mockApiRoute } from '@automation/referenced-automation-api';
+
+test('mockApiRoute overrides the same fetch call with mock data instead', async ({ page }) => {
+  await mockApiRoute(page, { url: '**/api/profile', method: 'GET', body: { name: 'Mocked Ada' } });
+
+  await page.goto(`${server.baseUrl}/profile.html`);
+  await expect(page.locator('#profile-name')).toHaveText('Mocked Ada');
+});
+```
+
+See `tests/mockedProfile.spec.ts` for the full working example - `tests/support/authServer.ts`'s `profile.html` fetches `/api/profile` at runtime; one test asserts against the real endpoint's response, the other overrides it with `mockApiRoute` and asserts the mocked value renders instead. See `referenced-automation-api`'s own README ([Mocking](../referenced-automation-api/README.md#mocking)) for the other two mocking tools it ships (`MockServer` for API-level tests, `recordApiTraffic`/`playApiRecording` for record-once-replay-forever).
 
 ## Quick start
 

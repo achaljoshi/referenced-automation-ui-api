@@ -21,6 +21,19 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
 </body>
 </html>`;
 
+const PROFILE_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8" /><title>Profile</title></head>
+<body>
+  <div id="profile-name">loading...</div>
+  <script>
+    fetch('/api/profile')
+      .then((res) => res.json())
+      .then((profile) => { document.getElementById('profile-name').textContent = profile.name; });
+  </script>
+</body>
+</html>`;
+
 /**
  * A tiny server proving session state can be shared between an API-driven
  * step and a UI step: POST /login sets a `session` cookie via the API
@@ -54,6 +67,21 @@ export function startAuthServer(): Promise<AuthServerHandle> {
     if (req.method === 'GET' && req.url === '/dashboard.html') {
       res.writeHead(200, { 'Content-Type': 'text/html' });
       res.end(DASHBOARD_HTML);
+      return;
+    }
+
+    if (req.method === 'GET' && req.url === '/profile.html') {
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.end(PROFILE_HTML);
+      return;
+    }
+
+    // The real (unmocked) endpoint the page above fetches at runtime - see
+    // tests/mockedProfile.spec.ts for overriding this with mockApiRoute()
+    // instead of hitting this real handler.
+    if (req.method === 'GET' && req.url === '/api/profile') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ name: 'Ada Lovelace' }));
       return;
     }
 
