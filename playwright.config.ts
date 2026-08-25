@@ -20,7 +20,14 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
-  reporter: [['list'], ['html', { open: 'never' }]],
+  reporter: [
+    ['list'],
+    ['html', { open: 'never' }],
+    // Raw results only - generating the viewable HTML report is a separate
+    // step (`npm run allure:report`) since it needs a JRE on PATH, unlike
+    // collecting results here which is pure JS/TS.
+    ['allure-playwright', { resultsDir: 'allure-results' }],
+  ],
   use: {
     headless,
     screenshot: 'only-on-failure',

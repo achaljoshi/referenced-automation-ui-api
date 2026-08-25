@@ -50,6 +50,15 @@ Then write page objects on `BasePage` and API calls on `ApiClient` exactly as do
 
 Same `.env.<name>` + `ENV=<name>` pattern as the rest of this family (see `referenced-automation-utils`'s README). This repo's own tests spin up an in-process server and don't read `BASE_URL`/`API_BASE_URL` themselves - they're here as the template a real hybrid project's env files follow.
 
+## Allure reporting
+
+Every test run writes raw results to `allure-results/` via the `allure-playwright` reporter (pure JS/TS, no extra runtime needed). Turning those into the viewable HTML report needs a JRE on `PATH` (Allure's report generator is a Java tool) - that's why it's a separate step, not part of `npm test` itself:
+
+```bash
+npm test               # also writes allure-results/
+npm run allure:report  # generates allure-report/ and opens it in a browser
+```
+
 ## IDE setup
 
 Same as the other repos in this family: VS Code prompts for recommended extensions on open; IntelliJ/WebStorm ships ESLint/Prettier wired in plus an `npm: test` run configuration.
