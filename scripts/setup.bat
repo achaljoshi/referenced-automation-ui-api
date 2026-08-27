@@ -22,6 +22,8 @@ call :ensure_package referenced-automation-api
 if errorlevel 1 exit /b 1
 call :ensure_package referenced-automation-ui
 if errorlevel 1 exit /b 1
+call :ensure_package referenced-automation-sap
+if errorlevel 1 exit /b 1
 
 echo.
 echo == Installing dependencies ==========================================

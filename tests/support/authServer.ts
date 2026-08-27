@@ -34,6 +34,27 @@ const PROFILE_HTML = `<!DOCTYPE html>
 </body>
 </html>`;
 
+// Mimics UI5's real id convention (an auto-generated view/component path
+// prefix, then "--", then the developer-assigned logical id) - the same
+// fixture shape referenced-automation-sap's own tests use to prove
+// byControlId/waitForUI5Ready, reused here to demo those same helpers
+// from within this hybrid repo's test suite.
+const FIORI_STYLE_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8" /><title>Fiori-style fixture</title></head>
+<body>
+  <button id="__component0---mainView--addToCartBtn">Add to cart</button>
+  <div id="busy-overlay" class="sapUiLocalBusyIndicator" style="display:none;">Loading...</div>
+  <script>
+    document.getElementById('__component0---mainView--addToCartBtn').addEventListener('click', () => {
+      const overlay = document.getElementById('busy-overlay');
+      overlay.style.display = 'block';
+      setTimeout(() => { overlay.style.display = 'none'; }, 300);
+    });
+  </script>
+</body>
+</html>`;
+
 /**
  * A tiny server proving session state can be shared between an API-driven
  * step and a UI step: POST /login sets a `session` cookie via the API
@@ -73,6 +94,12 @@ export function startAuthServer(): Promise<AuthServerHandle> {
     if (req.method === 'GET' && req.url === '/profile.html') {
       res.writeHead(200, { 'Content-Type': 'text/html' });
       res.end(PROFILE_HTML);
+      return;
+    }
+
+    if (req.method === 'GET' && req.url === '/fiori-style.html') {
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.end(FIORI_STYLE_HTML);
       return;
     }
 

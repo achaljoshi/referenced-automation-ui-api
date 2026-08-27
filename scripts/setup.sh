@@ -36,10 +36,12 @@ ensure_package() {
 }
 
 echo "== Ensuring dependency packages exist in ${SHARED_PACKAGES_DIR} =========="
-# utils first - both api and ui depend on its tarball already existing.
+# utils first - api, ui, and (via ui) sap all depend on its tarball already
+# existing. ui before sap - sap's own build needs ui already packaged.
 ensure_package referenced-automation-utils
 ensure_package referenced-automation-api
 ensure_package referenced-automation-ui
+ensure_package referenced-automation-sap
 
 echo ""
 echo "== Installing dependencies =========================================="
