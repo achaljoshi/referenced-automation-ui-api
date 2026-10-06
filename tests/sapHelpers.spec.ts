@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '@automation/referenced-automation-ui';
 import { byControlId, waitForUI5Ready } from '@automation/referenced-automation-sap';
 import { actions } from '@automation/referenced-automation-ui';
 import { startAuthServer, stopAuthServer, type AuthServerHandle } from './support/authServer';

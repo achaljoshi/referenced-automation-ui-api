@@ -46,3 +46,6 @@ out/
 .project
 .classpath
 .settings/
+
+# Saved login state (cookies) from tests/auth.setup.ts - a credential, never committed
+.auth/

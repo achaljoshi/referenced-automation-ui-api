@@ -3,8 +3,9 @@ import { actions, locators } from '@automation/referenced-automation-ui';
 
 export interface DashboardPage {
   goto(url: string): Promise<void>;
-  isWelcomeShown(): Promise<boolean>;
-  isAnonymousShown(): Promise<boolean>;
+  /** Waits (up to the expect timeout) for the welcome banner; pass `{ timeout: 0 }` to read the current state instantly - for asserting it is NOT shown. */
+  isWelcomeShown(options?: { timeout?: number }): Promise<boolean>;
+  isAnonymousShown(options?: { timeout?: number }): Promise<boolean>;
 }
 
 export function createDashboardPage(page: Page): DashboardPage {
@@ -20,12 +21,12 @@ export function createDashboardPage(page: Page): DashboardPage {
       await actions.goto(page, url);
     },
 
-    async isWelcomeShown() {
-      return actions.isVisible(welcome);
+    async isWelcomeShown(options) {
+      return actions.isVisible(welcome, options);
     },
 
-    async isAnonymousShown() {
-      return actions.isVisible(anonymous);
+    async isAnonymousShown(options) {
+      return actions.isVisible(anonymous, options);
     },
   };
 }

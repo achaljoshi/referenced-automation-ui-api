@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '@automation/referenced-automation-ui';
 import { mockApiRoute } from '@automation/referenced-automation-api';
 import { startAuthServer, stopAuthServer, type AuthServerHandle } from './support/authServer';
 

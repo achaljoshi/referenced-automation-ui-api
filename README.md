@@ -24,6 +24,12 @@ test('an API-issued session cookie is honoured by the UI', async ({ page, contex
 
 No `document.cookie` scripting, no `context.addCookies()` bookkeeping - the session genuinely is one session, not two synchronised ones. See `tests/hybridSession.spec.ts` for the full working example (including the negative cases: no login → anonymous state, failed login → no session granted).
 
+## Log in once, start every test logged in
+
+`tests/auth.setup.ts` logs in by API once and saves the browser state to `.auth/user.json` (git-ignored - it is a credential). `playwright.config.ts` passes `auth: { setupMatch, storageState }` to the shared `createPlaywrightConfig`, which adds a `setup` project and makes every browser project start with that state. `tests/storageState.spec.ts` shows a test that does no login of its own.
+
+A test that needs a clean browser - the anonymous state, or doing the login itself - opts out with `test.use({ storageState: ANONYMOUS })` (see `hybridSession.spec.ts`).
+
 ## Mocking a UI page's runtime API data
 
 `referenced-automation-api` exports `mockApiRoute`, a wrapper around Playwright's own `page.route()` - built there so it's one `import` away from any UI project, including this one:
