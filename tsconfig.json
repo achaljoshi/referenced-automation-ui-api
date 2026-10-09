@@ -3,7 +3,9 @@
     "target": "ES2022",
     "module": "commonjs",
     "moduleResolution": "node",
-    "lib": ["ES2022"],
+    "lib": [
+      "ES2022"
+    ],
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "esModuleInterop": true,
@@ -12,5 +14,9 @@
     "resolveJsonModule": true,
     "noEmit": true
   },
-  "include": ["tests/**/*.ts", "playwright.config.ts"]
+  "include": [
+    "tests/**/*.ts",
+    "playwright.config.ts",
+    "features/**/*.ts"
+  ]
 }

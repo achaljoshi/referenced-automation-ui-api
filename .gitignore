@@ -50,3 +50,6 @@ out/
 
 # Saved login state (cookies) from tests/auth.setup.ts - a credential, never committed
 .auth/
+
+# Tests generated from Gherkin features by bddgen
+.features-gen/

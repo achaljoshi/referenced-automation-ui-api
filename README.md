@@ -52,6 +52,23 @@ interface does that part. Verification polls (the interface is asynchronous) and
 system and the field (`database: quantity is 30, SAP has 3`); an order that never arrives is reported as missing in the
 first system that lacks it, quoting the correlation id.
 
+## Gherkin / BDD (optional)
+
+For teams that write scenarios in Gherkin, `features/` shows the setup with [`playwright-bdd`](https://github.com/vitalets/playwright-bdd):
+
+| Piece | Where |
+|---|---|
+| the scenarios | `features/sap-sales-order.feature` |
+| the business-readable SAP vocabulary (`I open transaction "VA01"`, `I enter "OR" in the field labelled "Order Type"`, `the status bar shows a success message containing "..."`) | `registerSapSteps` in `@automation/referenced-automation-sap` - **shared by every project, not copied** |
+| wiring: the test the steps run in, and where to add this project's own steps | `features/steps/fixtures.ts`, `features/steps/steps.ts` |
+| config: its own `bdd` project; `bddgen` turns features into runnable tests in `.features-gen/` (git-ignored) | `playwright.config.ts` |
+
+```bash
+npm run test:bdd      # bddgen && playwright test --project=bdd   (npm test / test:smoke run bddgen first too)
+```
+
+The features run against the SAP package's built-in simulator so they work anywhere; against a real SAP, remove the `sapGuiTransport` override in `features/steps/fixtures.ts`. Steps find fields by the label the user sees, so a feature reads as business language and needs no technical ids; the correlation id, evidence, data cleanup and failure diagnostics of the SAP package apply to every scenario as they do to hand-written tests. Add project-specific steps with the same `Given/When/Then` in `features/steps/steps.ts`.
+
 ## Mocking a UI page's runtime API data
 
 `referenced-automation-api` exports `mockApiRoute`, a wrapper around Playwright's own `page.route()` - built there so it's one `import` away from any UI project, including this one:
