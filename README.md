@@ -30,6 +30,28 @@ No `document.cookie` scripting, no `context.addCookies()` bookkeeping - the sess
 
 A test that needs a clean browser - the anonymous state, or doing the login itself - opts out with `test.use({ storageState: ANONYMOUS })` (see `hybridSession.spec.ts`).
 
+## One scenario across SAP GUI, API, database and SFTP
+
+`tests/orderToCash.spec.ts` is the worked example of a cross-system flow: look up a price over REST, create a sales
+order in SAP GUI, then read the order back from the database, the SFTP drop and the fulfilment API and check they all
+agree with SAP. **One correlation id ties it together** - it is on the REST request header, written into the SAP order's
+*Customer Reference*, in the database row, in the SFTP file name and on the fulfilment API call - so a failing order can
+be followed through every system by searching for one value.
+
+| Piece | Where |
+|---|---|
+| the scenario | `tests/orderToCash.spec.ts` |
+| the reusable steps (`lookUpPrice`, `createOrderInSap`, `collectTrace`, `reconcile`) - each a `test.step` | `tests/support/flows/orderToCash.ts` |
+| the SAP screens as page objects | `tests/support/sap/pages.ts` |
+| the stand-in for the order interface and the three systems it feeds | `tests/support/orderLandscape.ts` |
+
+It runs anywhere: SAP GUI is the SAP package's built-in simulator and the landscape is in-process (SQLite, the shared SFTP
+test server, a mock REST server). To run it against a real landscape, use a real SAP session (`SAP_GUI_MODE`, see the SAP
+package) and point `OrderLandscape` at the real database, SFTP host and API - then delete `deliver()`, because SAP's
+interface does that part. Verification polls (the interface is asynchronous) and never sleeps; a mismatch names the
+system and the field (`database: quantity is 30, SAP has 3`); an order that never arrives is reported as missing in the
+first system that lacks it, quoting the correlation id.
+
 ## Mocking a UI page's runtime API data
 
 `referenced-automation-api` exports `mockApiRoute`, a wrapper around Playwright's own `page.route()` - built there so it's one `import` away from any UI project, including this one:
