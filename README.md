@@ -24,6 +24,8 @@ test('an API-issued session cookie is honoured by the UI', async ({ page, contex
 
 No `document.cookie` scripting, no `context.addCookies()` bookkeeping - the session genuinely is one session, not two synchronised ones. See `tests/hybridSession.spec.ts` for the full working example (including the negative cases: no login → anonymous state, failed login → no session granted).
 
+**The sample server checks the session itself**, so these tests can fail for the right reason. `POST /login` issues a *different* signed session per login (a random id, the user and an expiry, signed with a key) as an `HttpOnly` cookie; `dashboard.html` is rendered for whatever session the server finds and `/api/profile` answers 401 without a valid one. A forged, expired or missing cookie gets the anonymous page - `tests/sessionValidation.spec.ts` proves each (forged constant, tampered payload, someone else's signature, expiry with the server's clock moved on, a login the browser never received, two logins giving two sessions) and `tests/storageState.spec.ts` proves the saved login is worthless to a server that did not issue it. The default signing key is random per checkout (`.auth/session.key`, git-ignored; `AUTH_SESSION_KEY` overrides it): one key shared by every sample server is what lets the session saved by the `setup` project - a server that no longer exists - be recognised later, because the server checks the signature rather than remembering the login. `server.seen` records what the server made of each request's cookie, so a test can assert the cookie really was sent.
+
 ## Log in once, start every test logged in
 
 `tests/auth.setup.ts` logs in by API once and saves the browser state to `.auth/user.json` (git-ignored - it is a credential). `playwright.config.ts` passes `auth: { setupMatch, storageState }` to the shared `createPlaywrightConfig`, which adds a `setup` project and makes every browser project start with that state. `tests/storageState.spec.ts` shows a test that does no login of its own.
@@ -32,7 +34,9 @@ A test that needs a clean browser - the anonymous state, or doing the login itse
 
 ## One scenario across SAP GUI, API, database and SFTP
 
-`tests/orderToCash.spec.ts` is the worked example of a cross-system flow: look up a price over REST, create a sales
+`tests/orderToCash.spec.ts` is the worked example of a cross-system flow - and its tests are **harness self-tests**: the SAP GUI is the simulator and the test itself calls `landscape.deliver(...)` (awaited) with data it built from what it typed, so a green run proves the harness can create an order, read it back from every system, tie them together with one correlation id and report a disagreement or a *missing delivery* (one test per system left out: database, SFTP, fulfilment API) - not that a real SAP interface delivers. Only the simulator's order number is independent of the test. Against a real landscape, drop the `deliver()` call and keep `collectTrace` / `reconcile`. The order is registered in the SAP data registry as **kept**, not cleaned (nothing here undoes it); a real project passes `{ cleanup }` to `createOrderInSap`.
+
+The flow: look up a price over REST, create a sales
 order in SAP GUI, then read the order back from the database, the SFTP drop and the fulfilment API and check they all
 agree with SAP. **One correlation id ties it together** - it is on the REST request header, written into the SAP order's
 *Customer Reference*, in the database row, in the SFTP file name and on the fulfilment API call - so a failing order can
@@ -88,6 +92,8 @@ The features run against in-process stand-ins (SAP simulator, the sample web ser
 
 ## Converting recordings and curl commands
 
+(`tests/utilsMethods.spec.ts` and `tests/apiMethods.spec.ts` are thin import checks - the utils and API packages test their own methods in their own repos - and are deliberately not tagged `@smoke`.)
+
 Both converters ship in the packages this repo depends on, so they are here already:
 
 ```bash
@@ -122,7 +128,7 @@ See `tests/mockedProfile.spec.ts` for the full working example - `tests/support/
 npm test
 ```
 
-`setup.sh`/`setup.bat` run `npm ci`. They first run `npm config set registry "$NPM_REGISTRY_URL"` when that variable is set, so every package - the `@automation/*` ones too (`referenced-automation-utils`, `referenced-automation-api`, `referenced-automation-ui`, `referenced-automation-sap`), each **by the version in `package.json`** - is fetched from your organisation's npm registry. If those packages are not published there yet, or you want to try a change you have not published, run `./scripts/setup.sh --local` (`scripts\setup.bat --local` on Windows): it builds the sibling repos this one depends on - they must be checked out next to this one - into `../shared-packages` and installs those instead, without touching `package.json` or the lockfile. See [Publishing a package](#publishing-a-package-to-the-registry-jfrog-artifactory) and [Using a package without a registry](#using-a-package-without-a-registry-local-generation).
+`setup.sh`/`setup.bat` run `npm ci`. They first run `npm config set registry "$NPM_REGISTRY_URL"` when that variable is set, so every package - the `@automation/*` ones too (`referenced-automation-utils`, `referenced-automation-api`, `referenced-automation-ui`, `referenced-automation-sap`), each **by the version in `package.json`** - is fetched from your organisation's npm registry. If those packages are not published there yet, or you want to try a change you have not published, run `./scripts/setup.sh --local` (`scripts\setup.bat --local` on Windows): it builds the sibling repos this one depends on - they must be checked out next to this one - into `../shared-packages` and installs those instead, without touching `package.json` or the lockfile. See "Publishing a package to the registry" in the README of `referenced-automation-utils` (the same section is in `-api`, `-ui` and `-sap`) and [Using a package without a registry](#using-a-package-without-a-registry-local-generation).
 
 ## Using this pattern in your own project
 
@@ -155,7 +161,7 @@ To take a newer version, **change that number** (say `"^1.3.0"`), run `npm insta
 - `^1.3.0` accepts any `1.x` from 1.3.0 up (what `npm update` moves to); write `1.3.0` to pin exactly.
 - `npm ci` (CI, `setup.sh`) installs exactly what the lockfile records, so a version only changes when someone commits a change.
 - The lockfile in this repo records the version of each `@automation/*` package but not where it came from. The first `npm install` against the real registry adds that (`resolved` and `integrity`); commit the result.
-- A package that is itself depended on (`utils`, `api`, `ui`, `sap`) must be published again before its consumers can ask for the new version - see [Publishing a package](#publishing-a-package-to-the-registry-jfrog-artifactory) in that repo.
+- A package that is itself depended on (`utils`, `api`, `ui`, `sap`) must be published again before its consumers can ask for the new version - see "Publishing a package to the registry" in the README of `referenced-automation-utils` (the same section is in `-api`, `-ui` and `-sap`) in that repo.
 
 ## First rollout: publish, then install from the registry
 

@@ -26,8 +26,15 @@ Feature: One login, two frameworks
     When I reload the page
     Then I should see "Please log in"
 
-  Scenario: The page shows what the API serves, and a mocked answer replaces it
+  Scenario: The page shows what the API serves to a signed-in user, and a mocked answer replaces it
     Given I open the page "/profile.html"
+    Then I should see "Please log in to see your profile"
+    When I send a POST request to "/login" with JSON:
+      """
+      { "username": "ada", "password": "{{env:HYBRID_PASSWORD|secret}}" }
+      """
+    Then the response status is 200
+    When I reload the page
     Then I should see "Ada Lovelace"
     Given the request to "**/api/profile" returns JSON:
       """

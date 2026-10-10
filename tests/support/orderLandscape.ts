@@ -13,6 +13,9 @@ export interface DeliveredOrder {
   price: number;
 }
 
+/** A system the interface feeds; `deliver({ skip })` leaves one out - the defect "the order never reached system X" that a trace check must catch. */
+export type DownstreamSystem = 'database' | 'sftp' | 'fulfilment';
+
 /**
  * STAND-IN for what happens around SAP in a real landscape after a sales order is saved: the order interface
  * writes a row to a database, drops an XML file on an SFTP server and notifies a fulfilment service over REST.
@@ -58,22 +61,29 @@ export class OrderLandscape {
 
   /**
    * The order interface: runs `delayMs` after being called, like a real asynchronous interface, which is why the
-   * verification polls instead of sleeping. Resolves when everything has been delivered.
+   * verification polls instead of sleeping. Resolves when everything has been delivered - AWAIT it: a failed delivery
+   * rejects, and a promise nobody awaits turns that into an unhandled rejection after the test has moved on.
+   * `skip` leaves systems out, to prove the verification notices a missing delivery.
    */
-  deliver(order: DeliveredOrder, delayMs = 250): Promise<void> {
+  deliver(order: DeliveredOrder, delayMs = 250, options: { skip?: readonly DownstreamSystem[] } = {}): Promise<void> {
+    const skipped = (system: DownstreamSystem) => options.skip?.includes(system) === true;
     return new Promise((resolve, reject) => {
       setTimeout(async () => {
         try {
-          await this.db.update('INSERT INTO sales_orders VALUES (?, ?, ?, ?, ?, ?)', [order.orderNo, order.correlationId, order.customer, order.material, order.quantity, order.price]);
+          if (!skipped('database')) await this.db.update('INSERT INTO sales_orders VALUES (?, ?, ?, ?, ?, ?)', [order.orderNo, order.correlationId, order.customer, order.material, order.quantity, order.price]);
           const file = path.join(this.folder, `ORDER_${order.orderNo}_${order.correlationId.slice(0, 8)}.xml`);
-          fs.writeFileSync(file, `<order><no>${order.orderNo}</no><correlationId>${order.correlationId}</correlationId><customer>${order.customer}</customer><material>${order.material}</material><quantity>${order.quantity}</quantity></order>`);
-          await this.sftp.upload(file, `/outbound/${path.basename(file)}`);
-          const response = await fetch(`${this.api.baseUrl}/fulfilments`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-Correlation-Id': order.correlationId },
-            body: JSON.stringify({ orderNo: order.orderNo, material: order.material, quantity: order.quantity }),
-          });
-          if (!response.ok) throw new Error(`fulfilment API answered ${response.status}`);
+          if (!skipped('sftp')) {
+            fs.writeFileSync(file, `<order><no>${order.orderNo}</no><correlationId>${order.correlationId}</correlationId><customer>${order.customer}</customer><material>${order.material}</material><quantity>${order.quantity}</quantity></order>`);
+            await this.sftp.upload(file, `/outbound/${path.basename(file)}`);
+          }
+          if (!skipped('fulfilment')) {
+            const response = await fetch(`${this.api.baseUrl}/fulfilments`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'X-Correlation-Id': order.correlationId },
+              body: JSON.stringify({ orderNo: order.orderNo, material: order.material, quantity: order.quantity }),
+            });
+            if (!response.ok) throw new Error(`fulfilment API answered ${response.status}`);
+          }
           resolve();
         } catch (error) {
           reject(error);

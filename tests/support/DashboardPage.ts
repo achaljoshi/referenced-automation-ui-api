@@ -1,11 +1,16 @@
 import type { Page } from '@playwright/test';
-import { actions, locators } from '@automation/referenced-automation-ui';
+import { actions, assertions, locators } from '@automation/referenced-automation-ui';
 
 export interface DashboardPage {
   goto(url: string): Promise<void>;
-  /** Waits (up to the expect timeout) for the welcome banner; pass `{ timeout: 0 }` to read the current state instantly - for asserting it is NOT shown. */
+  /** Waits (up to the expect timeout) for the welcome banner. For "it is NOT shown" use `expectNoWelcome()` - a snapshot read passes before the page has rendered. */
   isWelcomeShown(options?: { timeout?: number }): Promise<boolean>;
   isAnonymousShown(options?: { timeout?: number }): Promise<boolean>;
+  /** Web-first assertions: they retry until the state is reached and fail with what the page showed. */
+  expectWelcome(): Promise<void>;
+  expectAnonymous(): Promise<void>;
+  expectNoWelcome(): Promise<void>;
+  expectNoAnonymous(): Promise<void>;
 }
 
 export function createDashboardPage(page: Page): DashboardPage {
@@ -28,5 +33,10 @@ export function createDashboardPage(page: Page): DashboardPage {
     async isAnonymousShown(options) {
       return actions.isVisible(anonymous, options);
     },
+
+    expectWelcome: () => assertions.toBeVisible(welcome),
+    expectAnonymous: () => assertions.toBeVisible(anonymous),
+    expectNoWelcome: () => assertions.not.toBeVisible(welcome),
+    expectNoAnonymous: () => assertions.not.toBeVisible(anonymous),
   };
 }

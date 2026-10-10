@@ -42,8 +42,15 @@ export async function lookUpPrice(api: ApiClient, material: string): Promise<num
   });
 }
 
-/** Creates the order in SAP GUI, writing the correlation id into the order's customer reference, and registers it for cleanup. */
-export async function createOrderInSap(sap: SapGuiSession, sapData: SapDataRegistry, correlationId: string, order: OrderRequest): Promise<string> {
+/** Creates the order in SAP GUI, writing the correlation id into the order's customer reference, and registers it (kept by default, or with the cleanup you pass). */
+export async function createOrderInSap(
+  sap: SapGuiSession,
+  sapData: SapDataRegistry,
+  correlationId: string,
+  order: OrderRequest,
+  /** What happens to the order afterwards. Default: it is KEPT (listed, not reported as cleaned). A real project passes `{ cleanup }` that cancels or deletes it. */
+  record: Parameters<SapDataRegistry['captureFromStatusBar']>[2] = { keep: true },
+): Promise<string> {
   return test.step('SAP GUI: create sales order (VA01)', async () => {
     await new EasyAccessPage(sap).open('VA01');
     const initial = await new CreateOrderInitialPage(sap).waitUntilDisplayed();
@@ -54,10 +61,10 @@ export async function createOrderInSap(sap: SapGuiSession, sapData: SapDataRegis
     await overview.addItem(0, { material: order.material, quantity: String(order.quantity) });
     await sap.evidence('order filled in');
     await overview.save.click();
-    const orderNo = await sapData.captureFromStatusBar('SalesOrder', /Order (\d+) has been saved/, {
-      // a real project cancels or deletes the test order here; the registry guarantees this runs even if the test fails
-      cleanup: async () => undefined,
-    });
+    // Nothing here undoes the order (the simulator forgets it with the session), so it is registered as KEPT, which is what
+    // the data report will say. A real project passes `{ cleanup: (s) => cancelOrder(s, ...) }`; the registry then runs it
+    // after the test, even if the test failed - and the report says 'cleaned' only when something really was.
+    const orderNo = await sapData.captureFromStatusBar('SalesOrder', /Order (\d+) has been saved/, record);
     await sap.evidence('order saved');
     return orderNo;
   });

@@ -22,11 +22,20 @@ test.describe('converters', () => {
   });
 
   test('tests/generated/api is what api-curl-to-playwright makes of curl/', () => {
-    const result = run(bin('referenced-automation-api', 'curlToTests.js'), ['curl/auth.curl', '--stdout', '--test-import', '../../support/generatedTest']);
-    expect(result.status, result.stderr).toBe(0);
-    expect(squash(fs.readFileSync(path.join(root, 'tests/generated/api/auth.spec.ts'), 'utf8'))).toBe(squash(result.stdout));
-    expect(result.stdout).not.toContain("'secret'"); // the password in the curl command is read from API_PASSWORD, never written into the test
-    expect(result.stderr).toContain('API_PASSWORD');
+    // Written to a sibling folder of the same depth (not --stdout): the converter points loadEnv at the project folder
+    // when the file lands inside a Playwright project, and the relative path depends on how deep the file is.
+    const out = path.join(root, 'tests/generated/_check-api');
+    fs.rmSync(out, { recursive: true, force: true });
+    try {
+      const result = run(bin('referenced-automation-api', 'curlToTests.js'), ['curl/auth.curl', '--out', out, '--test-import', '../../support/generatedTest']);
+      expect(result.status, result.stderr).toBe(0);
+      const made = fs.readFileSync(path.join(out, 'auth.spec.ts'), 'utf8');
+      expect(squash(fs.readFileSync(path.join(root, 'tests/generated/api/auth.spec.ts'), 'utf8'))).toBe(squash(made));
+      expect(made).not.toContain("'secret'"); // the password in the curl command is read from API_PASSWORD, never written into the test
+      expect(result.stderr).toContain('API_PASSWORD');
+    } finally {
+      fs.rmSync(out, { recursive: true, force: true });
+    }
   });
 
   test('the converters refuse input that is not theirs, with a message that says what they expect', () => {

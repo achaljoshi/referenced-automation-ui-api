@@ -32,8 +32,10 @@ test.describe('hybrid identity - one login, two frameworks', () => {
 
     const dashboard = createDashboardPage(page);
     await dashboard.goto(`${server.baseUrl}/dashboard.html`);
-    expect(await dashboard.isWelcomeShown()).toBe(true);
-    expect(await dashboard.isAnonymousShown({ timeout: 0 })).toBe(false);
+    await dashboard.expectWelcome();
+    await dashboard.expectNoAnonymous();
+    // the SERVER decided that, from the cookie the browser sent - not a script reading document.cookie
+    expect(server.seen.filter((r) => r.path === '/dashboard.html').pop()?.session).toBe('valid');
   });
 
   test('without logging in via the API, the UI shows the anonymous state @regression', async ({
@@ -41,8 +43,8 @@ test.describe('hybrid identity - one login, two frameworks', () => {
   }) => {
     const dashboard = createDashboardPage(page);
     await dashboard.goto(`${server.baseUrl}/dashboard.html`);
-    expect(await dashboard.isAnonymousShown()).toBe(true);
-    expect(await dashboard.isWelcomeShown({ timeout: 0 })).toBe(false);
+    await dashboard.expectAnonymous();
+    await dashboard.expectNoWelcome();
   });
 
   test('a failed API login does not grant a UI session @regression', async ({ page, context }) => {
@@ -54,6 +56,7 @@ test.describe('hybrid identity - one login, two frameworks', () => {
 
     const dashboard = createDashboardPage(page);
     await dashboard.goto(`${server.baseUrl}/dashboard.html`);
-    expect(await dashboard.isAnonymousShown()).toBe(true);
+    await dashboard.expectAnonymous();
+    await dashboard.expectNoWelcome();
   });
 });

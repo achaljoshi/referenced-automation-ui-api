@@ -19,4 +19,4 @@ Feature: Order to cash across SAP and the systems around it
     When the order interface delivers order "{{order}}" for customer "1000"
     And I wait until a GET request to "{{fulfilmentApi}}/fulfilments?orderNo={{order}}" returns "[0].status" equal to "RECEIVED" within 10 seconds
     Then the response field "[0].orderNo" equals "{{order}}"
-    And the response field "[0].quantity" equals "5"
+    And the response field "[0].quantity" equals 5

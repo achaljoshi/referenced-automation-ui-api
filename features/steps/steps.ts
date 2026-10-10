@@ -17,7 +17,9 @@ Given('the order landscape is running', async ({ landscape, vars }) => {
   vars.set('fulfilmentApi', landscape.api.baseUrl);
 });
 
-When('the order interface delivers order {string} for customer {string}', ({ landscape, vars, correlationId }, orderNo: string, customer: string) => {
-  // Asynchronous, like the real interface: the feature waits for the result with "I wait until ...", not with a sleep.
-  void landscape.deliver({ orderNo: vars.interpolate(orderNo), correlationId, customer: vars.interpolate(customer), material: 'TG11', quantity: 5, price: 12.5 });
+When('the order interface delivers order {string} for customer {string}', async ({ landscape, vars, correlationId }, orderNo: string, customer: string) => {
+  // STAND-IN for SAP's own interface (a real landscape has no such step). It is awaited: a delivery that fails (database,
+  // SFTP or API) fails THIS step with its reason, instead of an unhandled rejection later. The feature still checks the
+  // result from outside with "I wait until ...", never with a sleep.
+  await landscape.deliver({ orderNo: vars.interpolate(orderNo), correlationId, customer: vars.interpolate(customer), material: 'TG11', quantity: 5, price: 12.5 });
 });
