@@ -14,7 +14,7 @@ module.exports = {
     node: true,
     es2022: true,
   },
-  ignorePatterns: ['dist', 'node_modules', '*.js', '*.cjs'],
+  ignorePatterns: ['dist', 'node_modules', '*.js', '*.cjs', 'recordings'],
   rules: {
     '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
     '@typescript-eslint/explicit-module-boundary-types': 'off',

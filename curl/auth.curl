@@ -1,0 +1,23 @@
+# Example curl file: `npm run convert:api` turns every command into a test that uses the API framework's apiClient.
+# Secrets are never copied into the test - the password below becomes API_PASSWORD, read from the environment.
+
+# name: Log in with valid credentials
+# expect: 200
+# expect-json: user = ada
+# expect-json: token = issued-by-api
+curl -X POST 'http://127.0.0.1:3000/login' -H 'Content-Type: application/json' -d '{"username":"ada","password":"secret"}'
+
+# name: A wrong password is refused
+# secret: inline
+# expect: 401
+# expect-json: error = invalid_credentials
+curl -X POST 'http://127.0.0.1:3000/login' -H 'Content-Type: application/json' -d '{"username":"ada","password":"not-the-password"}'
+
+# name: The profile the web page shows
+# expect-json: name = Ada Lovelace
+# expect-header: content-type ~ json
+curl 'http://127.0.0.1:3000/api/profile' -H 'accept: application/json'
+
+# name: Unknown paths are 404
+# expect: 404
+curl 'http://127.0.0.1:3000/nothing-here'

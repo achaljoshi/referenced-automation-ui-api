@@ -52,22 +52,51 @@ interface does that part. Verification polls (the interface is asynchronous) and
 system and the field (`database: quantity is 30, SAP has 3`); an order that never arrives is reported as missing in the
 first system that lacks it, quoting the correlation id.
 
-## Gherkin / BDD (optional)
+## Gherkin / BDD (`playwright-bdd` 9.2.1)
 
-For teams that write scenarios in Gherkin, `features/` shows the setup with [`playwright-bdd`](https://github.com/vitalets/playwright-bdd):
+Scenarios that mix SAP, the web UI and APIs, in business language, with one vocabulary per package shared by every project (not copied):
 
 | Piece | Where |
 |---|---|
-| the scenarios | `features/sap-sales-order.feature` |
-| the business-readable SAP vocabulary (`I open transaction "VA01"`, `I enter "OR" in the field labelled "Order Type"`, `the status bar shows a success message containing "..."`) | `registerSapSteps` in `@automation/referenced-automation-sap` - **shared by every project, not copied** |
-| wiring: the test the steps run in, and where to add this project's own steps | `features/steps/fixtures.ts`, `features/steps/steps.ts` |
+| UI sentences (`I click the button "Log in"`, `I should see "Welcome back!"`) | `registerUiSteps` in `@automation/referenced-automation-ui` |
+| API sentences (`I send a POST request to "/login" with JSON:`, `the response status is 200`) | `registerApiSteps` in `@automation/referenced-automation-api` |
+| SAP sentences (`I open transaction "VA01"`, `I remember the number from the status bar ... as "order"`) | `registerSapSteps` in `@automation/referenced-automation-sap` |
+| data sentences (`I generate a random email called "login"`, `the variable "x" matches "..."`) | `registerDataSteps` (UI and API packages carry the same one - register it once) |
+| the scenarios | `features/hybrid-login.feature`, `features/order-to-cash.feature`, `features/sap-sales-order.feature` |
+| wiring: ONE test that merges the SAP, UI and API tests, and where to add this project's own steps | `features/steps/fixtures.ts`, `features/steps/steps.ts` |
 | config: its own `bdd` project; `bddgen` turns features into runnable tests in `.features-gen/` (git-ignored) | `playwright.config.ts` |
+
+```gherkin
+Scenario: An order created in SAP reaches the fulfilment API
+  Given I am logged on to SAP
+  When I open transaction "VA01"
+  ...
+  And I click the toolbar button "Save"
+  And I remember the number from the status bar matching "Order (\d+)" as "order"
+  When the order interface delivers order "{{order}}" for customer "1000"
+  And I wait until a GET request to "{{fulfilmentApi}}/fulfilments?orderNo={{order}}" returns "[0].status" equal to "RECEIVED" within 10 seconds
+  Then the response field "[0].orderNo" equals "{{order}}"
+```
+
+What makes the libraries one framework: they share **one `vars`** (a value remembered from SAP is `{{order}}` to the next API step) and one correlation id, and every string in every step understands `{{placeholders}}` (`{{env:X}}`, `{{uuid}}`, `{{random:email}}`, `{{date:+7d}}`). The hybrid feature logs in through the API and the browser is signed in, because the API client is built on the browser context's own request context (the same cookie jar).
 
 ```bash
 npm run test:bdd      # bddgen && playwright test --project=bdd   (npm test / test:smoke run bddgen first too)
 ```
 
-The features run against the SAP package's built-in simulator so they work anywhere; against a real SAP, remove the `sapGuiTransport` override in `features/steps/fixtures.ts`. Steps find fields by the label the user sees, so a feature reads as business language and needs no technical ids; the correlation id, evidence, data cleanup and failure diagnostics of the SAP package apply to every scenario as they do to hand-written tests. Add project-specific steps with the same `Given/When/Then` in `features/steps/steps.ts`.
+The features run against in-process stand-ins (SAP simulator, the sample web server, the order landscape) so they work anywhere; for real systems remove the overrides in `features/steps/fixtures.ts` and set `SAP_GUI_MODE` / `BASE_URL` / `API_BASE_URL`.
+
+## Converting recordings and curl commands
+
+Both converters ship in the packages this repo depends on, so they are here already:
+
+```bash
+npx playwright codegen http://localhost:3000/profile.html --output recordings/profile.spec.ts
+npm run convert:ui        # ui-codegen-to-playwright recordings --out tests/generated/ui   -> actions / locators / assertions
+npm run convert:api       # api-curl-to-playwright curl --out tests/generated/api          -> apiClient / auth classes / response assertions
+```
+
+`recordings/profile-and-dashboard.spec.ts` and `curl/auth.curl` are worked examples; `tests/generated/` holds what they produce and runs in the suite (`tests/converters.spec.ts` fails if a package upgrade changes the output). Typed passwords and curl credentials are read from the environment, never written into the generated tests. See the UI and API READMEs for the options (`--page-objects`, `--data`, `--flow`, `--param`, `--strict`, ...).
 
 ## Mocking a UI page's runtime API data
 

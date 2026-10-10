@@ -18,7 +18,9 @@
     "allure:open": "allure open allure-report",
     "allure:report": "npm run allure:generate && npm run allure:open",
     "test:bdd": "bddgen && playwright test --project=bdd",
-    "security": "automation-audit-gate && automation-scan-secrets"
+    "security": "automation-audit-gate && automation-scan-secrets",
+    "convert:ui": "ui-codegen-to-playwright recordings --out tests/generated/ui --test-import ../../support/generatedTest",
+    "convert:api": "api-curl-to-playwright curl --out tests/generated/api --test-import ../../support/generatedTest"
   },
   "dependencies": {
     "@automation/referenced-automation-api": "file:../shared-packages/automation-referenced-automation-api-1.0.0.tgz",
