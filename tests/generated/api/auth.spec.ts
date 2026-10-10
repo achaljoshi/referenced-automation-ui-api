@@ -7,52 +7,95 @@ import { expect, test } from '../../support/generatedTest';
 
 const env = loadEnv();
 
+/** Everything the commands send and expect. Change a value here and every step that uses it follows. */
+const CONSTANTS = {
+  // headers sent (secrets are read from the environment)
+  headers: {
+    theProfileTheWebPageShows: {
+      accept: 'application/json',
+    },
+  },
+  // request bodies sent (secrets are read from the environment)
+  bodies: {
+    logInWithValidCredentials: {
+      username: 'ada',
+      get password() {
+        return env.get('API_PASSWORD');
+      },
+    },
+    aWrongPasswordIsRefused: {
+      username: 'ada',
+      password: 'not-the-password',
+    },
+  },
+  // what each command checks
+  expected: {
+    logInWithValidCredentials: { status: 200, json: { user: 'ada', token: 'issued-by-api' } },
+    aWrongPasswordIsRefused: { status: 401, json: { error: 'invalid_credentials' } },
+    theProfileTheWebPageShows: {
+      json: { name: 'Ada Lovelace' },
+      headersContain: { 'content-type': 'json' },
+    },
+    unknownPathsAre404: { status: 404 },
+  },
+};
+
+/** Where each call goes. When an endpoint moves, change it here. */
+const ENDPOINTS = {
+  login: '/login',
+  apiProfile: '/api/profile',
+  nothingHere: '/nothing-here',
+};
+
 test.describe('auth', () => {
   // curl command on line 8
   test('Log in with valid credentials @api', async ({ apiClient }) => {
-    const response = await apiClient.post('/login', {
-      json: {
-        username: 'ada',
-        password: env.get('API_PASSWORD'),
-      },
+    const response = await apiClient.post(ENDPOINTS.login, {
+      json: CONSTANTS.bodies.logInWithValidCredentials,
       maxRedirects: 0,
     });
-    expect(response.status(), `Unexpected status; body: ${response.text().slice(0, 500)}`).toBe(200);
-    expect(response.get('user')).toBe('ada');
-    expect(response.get('token')).toBe('issued-by-api');
+    expect(response.status(), `Unexpected status; body: ${response.text().slice(0, 500)}`).toBe(
+      CONSTANTS.expected.logInWithValidCredentials.status,
+    );
+    expect(response.get('user')).toBe(CONSTANTS.expected.logInWithValidCredentials.json.user);
+    expect(response.get('token')).toBe(CONSTANTS.expected.logInWithValidCredentials.json.token);
   });
 
   // curl command on line 14
   test('A wrong password is refused @api', async ({ apiClient }) => {
-    const response = await apiClient.post('/login', {
-      json: {
-        username: 'ada',
-        password: 'not-the-password',
-      },
+    const response = await apiClient.post(ENDPOINTS.login, {
+      json: CONSTANTS.bodies.aWrongPasswordIsRefused,
       maxRedirects: 0,
     });
-    expect(response.status(), `Unexpected status; body: ${response.text().slice(0, 500)}`).toBe(401);
-    expect(response.get('error')).toBe('invalid_credentials');
+    expect(response.status(), `Unexpected status; body: ${response.text().slice(0, 500)}`).toBe(
+      CONSTANTS.expected.aWrongPasswordIsRefused.status,
+    );
+    expect(response.get('error')).toBe(CONSTANTS.expected.aWrongPasswordIsRefused.json.error);
   });
 
   // curl command on line 19
   test('The profile the web page shows @api', async ({ apiClient }) => {
-    const response = await apiClient.get('/api/profile', {
-      headers: {
-        accept: 'application/json',
-      },
+    const response = await apiClient.get(ENDPOINTS.apiProfile, {
+      headers: CONSTANTS.headers.theProfileTheWebPageShows,
       maxRedirects: 0,
     });
-    expect(response.ok(), `Expected a 2xx response but got ${response.status()}\n${response.text().slice(0, 500)}`).toBe(true);
-    expect(response.get('name')).toBe('Ada Lovelace');
-    expect(response.header('content-type')).toContain('json');
+    expect(
+      response.ok(),
+      `Expected a 2xx response but got ${response.status()}\n${response.text().slice(0, 500)}`,
+    ).toBe(true);
+    expect(response.get('name')).toBe(CONSTANTS.expected.theProfileTheWebPageShows.json.name);
+    expect(response.header('content-type')).toContain(
+      CONSTANTS.expected.theProfileTheWebPageShows.headersContain['content-type'],
+    );
   });
 
   // curl command on line 23
   test('Unknown paths are 404 @api', async ({ apiClient }) => {
-    const response = await apiClient.get('/nothing-here', {
+    const response = await apiClient.get(ENDPOINTS.nothingHere, {
       maxRedirects: 0,
     });
-    expect(response.status(), `Unexpected status; body: ${response.text().slice(0, 500)}`).toBe(404);
+    expect(response.status(), `Unexpected status; body: ${response.text().slice(0, 500)}`).toBe(
+      CONSTANTS.expected.unknownPathsAre404.status,
+    );
   });
 });
