@@ -3,12 +3,33 @@
 // Paths are relative to BASE_URL - set it to http://127.0.0.1:3000 to open what was recorded.
 import { actions, assertions, locators } from '@automation/referenced-automation-ui';
 import { test } from '../../support/generatedTest';
+import type { Page } from '@playwright/test';
+
+/** Everything the recording visited, typed and expected. Change a value here and every step that uses it follows. */
+const CONSTANTS = {
+  // pages the recording visited (relative to BASE_URL)
+  urls: {
+    profileHtml: '/profile.html',
+    dashboardHtml: '/dashboard.html',
+  },
+  // what the recording checked
+  expected: {
+    profileNameElementText: 'Ada Lovelace',
+  },
+} as const;
+
+/** Every element the recording used, named once. When the page changes, fix the locator here and every step follows. */
+const LOCATORS = {
+  profileNameElement: (scope: Page) => locators.byCss(scope, '#profile-name'),
+  pleaseLogInText: (scope: Page) => locators.byText(scope, 'Please log in'),
+  welcomeBackText: (scope: Page) => locators.byText(scope, 'Welcome back!'),
+} as const;
 
 test('profile-and-dashboard @ui', async ({ page }) => {
-  await actions.goto(page, '/profile.html');
-  await assertions.toHaveText(locators.byCss(page, '#profile-name'), 'Ada Lovelace');
-  await actions.goto(page, '/dashboard.html');
-  await assertions.toBeVisible(locators.byText(page, 'Please log in'));
-  await assertions.toBeHidden(locators.byText(page, 'Welcome back!'));
+  await actions.goto(page, CONSTANTS.urls.profileHtml);
+  await assertions.toHaveText(LOCATORS.profileNameElement(page), CONSTANTS.expected.profileNameElementText);
+  await actions.goto(page, CONSTANTS.urls.dashboardHtml);
+  await assertions.toBeVisible(LOCATORS.pleaseLogInText(page));
+  await assertions.toBeHidden(LOCATORS.welcomeBackText(page));
   // removed: page.waitForTimeout(1000) - actions and assertions wait for themselves
 });

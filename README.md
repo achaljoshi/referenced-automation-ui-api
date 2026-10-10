@@ -96,7 +96,7 @@ npm run convert:ui        # ui-codegen-to-playwright recordings --out tests/gene
 npm run convert:api       # api-curl-to-playwright curl --out tests/generated/api          -> apiClient / auth classes / response assertions
 ```
 
-`recordings/profile-and-dashboard.spec.ts` and `curl/auth.curl` are worked examples; `tests/generated/` holds what they produce and runs in the suite (`tests/converters.spec.ts` fails if a package upgrade changes the output). Typed passwords and curl credentials are read from the environment, never written into the generated tests. See the UI and API READMEs for the options (`--page-objects`, `--data`, `--flow`, `--param`, `--strict`, ...).
+The converted UI test starts with a `CONSTANTS` object (URLs, typed values, expected values) and a `LOCATORS` object (every element, named once) and its steps only refer to them - change an input or fix a locator once, at the top. `recordings/profile-and-dashboard.spec.ts` and `curl/auth.curl` are worked examples; `tests/generated/` holds what they produce and runs in the suite (`tests/converters.spec.ts` fails if a package upgrade changes the output). Typed passwords and curl credentials are read from the environment, never written into the generated tests. See the UI and API READMEs for the options (`--page-objects`, `--data`, `--flow`, `--param`, `--strict`, ...).
 
 ## Mocking a UI page's runtime API data
 
