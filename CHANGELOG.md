@@ -13,3 +13,6 @@
 - **Playwright 1.64.0** (was 1.62.1): the `@playwright/test` / `playwright-core` floor is `^1.64.0` and the peer range is `>=1.64.0 <2.0.0` where the package declares one; run `npx playwright install chromium` after upgrading.
 - `playwright-bdd` pinned exactly to 9.2.1.
 - `playwright.config.ts` uses the shared `createPlaywrightConfig`; duplicated SMTP/SFTP test servers removed (use `testing` from utils); specs use the UI package's `test` (correlation id, scenario banner).
+
+### Fixed
+- A passing run could exit 1 with "1 error was not a part of any test": the Allure reporter copying a SAP evidence screenshot lost a race with Playwright deleting the passing test's output folder. `preserveOutput: 'always'` (as CI already had) removes it.

@@ -21,4 +21,8 @@ export default createPlaywrightConfig({
   // opt out with `test.use({ storageState: ANONYMOUS })`.
   auth: { setupMatch: /auth\.setup\.ts/, storageState: AUTH_FILE },
   extraProjects: [{ name: 'bdd', testDir: bddTestDir, use: { sapGuiMode: 'attach' } as Record<string, unknown> }],
+  // Keep the output of passing tests too (CI already does). These specs attach SAP evidence screenshots even when they pass;
+  // with 'failures-only' Playwright deletes a passing test's folder while the Allure reporter is still copying those files,
+  // which fails the run with ENOENT although every test passed.
+  overrides: { preserveOutput: 'always' },
 });
