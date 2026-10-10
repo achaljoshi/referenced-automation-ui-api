@@ -10,6 +10,7 @@
 - `typecheck` and `security` scripts and pipeline job.
 
 ### Changed
+- **`@automation/*` dependencies are version ranges (`^1.0.0`)**, installed from the registry in `NPM_REGISTRY_URL` (`setup` runs `npm config set registry` first); `setup.sh --local` installs locally built tarballs instead. The pipeline no longer clones sibling repos. README: upgrading, local generation.
 - **Playwright 1.64.0** (was 1.62.1): the `@playwright/test` / `playwright-core` floor is `^1.64.0` and the peer range is `>=1.64.0 <2.0.0` where the package declares one; run `npx playwright install chromium` after upgrading.
 - `playwright-bdd` pinned exactly to 9.2.1.
 - `playwright.config.ts` uses the shared `createPlaywrightConfig`; duplicated SMTP/SFTP test servers removed (use `testing` from utils); specs use the UI package's `test` (correlation id, scenario banner).

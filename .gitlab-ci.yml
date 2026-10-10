@@ -44,24 +44,13 @@
 # self-contained). `--with-deps` is deliberately NOT used, since it also
 # apt-get installs OS packages, needing its own network path.
 #
-# ---- Cross-repo dependency note ----
+# ---- Cross-repo dependencies: installed by version ----
 #
-# This repo composes referenced-automation-utils, referenced-automation-api,
-# referenced-automation-ui, and referenced-automation-sap as plain npm
-# dependencies, none yet published to a registry - see
-# referenced-automation-utils' README for why. The `build` stage below
-# clones all four fresh, in the order each one's own build needs (utils
-# first, then api and ui, then sap - which needs ui already packaged), and
-# packages them with their own scripts/create-package.sh, the exact same
-# scripts a developer running scripts/setup.sh locally would use, so CI and
-# local setup never diverge.
-#
-# This assumes all four sibling repos live in the same GitLab
-# group/namespace as this repo and are reachable with this job's own
-# CI_JOB_TOKEN. If your org's GitLab layout differs, override the
-# *_REPO_URL variables below instead of editing this file. This repo has
-# no build/create-package script of its own - nothing depends on it, it's
-# the family's integration/demo repo, not a publishable package.
+# The @automation/* packages this repo uses are listed with their versions in package.json and installed by
+# `npm ci` from the registry in NPM_REGISTRY_URL, like any other package - nothing is cloned or packed here.
+# So every package this repo depends on must be PUBLISHED there at the version package.json asks for
+# (README: Publishing a package). To take a newer version, change it in package.json, run `npm install` and
+# commit package.json and package-lock.json.
 # ============================================================================
 
 image: csg-cst-docker-local.artifactory.alm.corp.hmrc.gov.uk:443/common/microsoft/playwright:v1.47.0-jammy
@@ -79,10 +68,6 @@ stages:
   - report
 
 variables:
-  UTILS_REPO_URL: "${CI_SERVER_URL}/${CI_PROJECT_NAMESPACE}/referenced-automation-utils.git"
-  API_REPO_URL: "${CI_SERVER_URL}/${CI_PROJECT_NAMESPACE}/referenced-automation-api.git"
-  UI_REPO_URL: "${CI_SERVER_URL}/${CI_PROJECT_NAMESPACE}/referenced-automation-ui.git"
-  SAP_REPO_URL: "${CI_SERVER_URL}/${CI_PROJECT_NAMESPACE}/referenced-automation-sap.git"
   npm_config_cache: "${CI_PROJECT_DIR}/.npm-cache"
 
 cache:
@@ -94,27 +79,13 @@ before_script:
   - if [ -n "${NPM_REGISTRY_URL:-}" ]; then npm config set registry "$NPM_REGISTRY_URL"; fi
   - if [ -n "${PLAYWRIGHT_DOWNLOAD_HOST:-}" ]; then export PLAYWRIGHT_DOWNLOAD_HOST; fi
 
-.package_dependencies: &package_dependencies
-  - SHARED_PACKAGES_DIR="$(realpath "${CI_PROJECT_DIR}/../shared-packages")"
-  - mkdir -p "$SHARED_PACKAGES_DIR"
-  - git clone --depth 1 "https://gitlab-ci-token:${CI_JOB_TOKEN}@${UTILS_REPO_URL#https://}" /tmp/referenced-automation-utils
-  - bash /tmp/referenced-automation-utils/scripts/create-package.sh "$SHARED_PACKAGES_DIR"
-  - git clone --depth 1 "https://gitlab-ci-token:${CI_JOB_TOKEN}@${API_REPO_URL#https://}" /tmp/referenced-automation-api
-  - bash /tmp/referenced-automation-api/scripts/create-package.sh "$SHARED_PACKAGES_DIR"
-  - git clone --depth 1 "https://gitlab-ci-token:${CI_JOB_TOKEN}@${UI_REPO_URL#https://}" /tmp/referenced-automation-ui
-  - bash /tmp/referenced-automation-ui/scripts/create-package.sh "$SHARED_PACKAGES_DIR"
-  - git clone --depth 1 "https://gitlab-ci-token:${CI_JOB_TOKEN}@${SAP_REPO_URL#https://}" /tmp/referenced-automation-sap
-  - bash /tmp/referenced-automation-sap/scripts/create-package.sh "$SHARED_PACKAGES_DIR"
-
 build:
   stage: build
   script:
-    - *package_dependencies
     - npm ci
     - npm run lint
-  # No dist/ artifact - this repo isn't a publishable package, just a
-  # cache-warming/validation pass before the test jobs below re-do the
-  # dependency packaging themselves (GitLab jobs don't share a filesystem).
+  # No dist/ artifact - this repo isn't a publishable package, just an install/lint pass before the test jobs below
+  # (GitLab jobs don't share a filesystem, so each installs its own dependencies).
 
 test:
   stage: test
@@ -123,7 +94,6 @@ test:
     matrix:
       - BROWSER: [chromium, firefox, webkit]
   script:
-    - *package_dependencies
     - npm ci
     - npx playwright install "$BROWSER"
     - HEADLESS=true npm test
@@ -150,7 +120,6 @@ security:
   needs: ["build"]
   allow_failure: true
   script:
-    - *package_dependencies
     - npm ci
     - npx automation-scan-secrets
     - npx automation-audit-gate

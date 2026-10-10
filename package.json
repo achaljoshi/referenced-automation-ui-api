@@ -23,10 +23,10 @@
     "convert:api": "api-curl-to-playwright curl --out tests/generated/api --test-import ../../support/generatedTest"
   },
   "dependencies": {
-    "@automation/referenced-automation-api": "file:../shared-packages/automation-referenced-automation-api-1.0.0.tgz",
-    "@automation/referenced-automation-sap": "file:../shared-packages/automation-referenced-automation-sap-1.0.0.tgz",
-    "@automation/referenced-automation-ui": "file:../shared-packages/automation-referenced-automation-ui-1.0.0.tgz",
-    "@automation/referenced-automation-utils": "file:../shared-packages/automation-referenced-automation-utils-1.0.0.tgz"
+    "@automation/referenced-automation-api": "^1.0.0",
+    "@automation/referenced-automation-sap": "^1.0.0",
+    "@automation/referenced-automation-ui": "^1.0.0",
+    "@automation/referenced-automation-utils": "^1.0.0"
   },
   "overrides": {
     "uuid": "^11.1.1"

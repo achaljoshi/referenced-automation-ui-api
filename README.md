@@ -122,20 +122,72 @@ See `tests/mockedProfile.spec.ts` for the full working example - `tests/support/
 npm test
 ```
 
-`setup.sh`/`setup.bat` work from a completely fresh clone of the whole repo family, in any order: this repo depends on `referenced-automation-utils`, `referenced-automation-api`, and `referenced-automation-ui`, so setup builds whichever of their tarballs don't already exist in `../shared-packages` automatically, from `../referenced-automation-utils`, `../referenced-automation-api`, `../referenced-automation-ui` in that order (cloning nothing on its own - those sibling repos must already be checked out next to this one).
+`setup.sh`/`setup.bat` run `npm ci`. They first run `npm config set registry "$NPM_REGISTRY_URL"` when that variable is set, so every package - the `@automation/*` ones too (`referenced-automation-utils`, `referenced-automation-api`, `referenced-automation-ui`, `referenced-automation-sap`), each **by the version in `package.json`** - is fetched from your organisation's npm registry. If those packages are not published there yet, or you want to try a change you have not published, run `./scripts/setup.sh --local` (`scripts\setup.bat --local` on Windows): it builds the sibling repos this one depends on - they must be checked out next to this one - into `../shared-packages` and installs those instead, without touching `package.json` or the lockfile. See [Publishing a package](#publishing-a-package-to-the-registry-jfrog-artifactory) and [Using a package without a registry](#using-a-package-without-a-registry-local-generation).
 
 ## Using this pattern in your own project
 
 ```jsonc
-// package.json
+// package.json - versions, from the registry in NPM_REGISTRY_URL
 "dependencies": {
-  "@automation/referenced-automation-ui": "file:../shared-packages/referenced-automation-ui-1.0.0.tgz",
-  "@automation/referenced-automation-api": "file:../shared-packages/referenced-automation-api-1.0.0.tgz",
-  "@automation/referenced-automation-utils": "file:../shared-packages/referenced-automation-utils-1.0.0.tgz"
+  "@automation/referenced-automation-ui": "^1.0.0",
+  "@automation/referenced-automation-api": "^1.0.0",
+  "@automation/referenced-automation-utils": "^1.0.0"
 }
 ```
 
 Then write page objects as factory functions on top of `actions` and API calls on `ApiClient` exactly as documented in each of those repos' READMEs - this repo adds nothing to their APIs, it only demonstrates using both at once.
+
+## Upgrading a package: change one version
+
+This repo lists the `@automation/*` packages it uses in `package.json` with a version range, like any other dependency:
+
+```jsonc
+"dependencies": {
+  "@automation/referenced-automation-utils": "^1.0.0",
+  "@automation/referenced-automation-api": "^1.0.0",
+  "@automation/referenced-automation-ui": "^1.0.0",
+  "@automation/referenced-automation-sap": "^1.0.0"
+}
+```
+
+To take a newer version, **change that number** (say `"^1.3.0"`), run `npm install`, run the tests and commit `package.json` and `package-lock.json`. npm downloads the new version from the registry in `NPM_REGISTRY_URL`; nothing is built, copied or placed by hand.
+
+- `^1.3.0` accepts any `1.x` from 1.3.0 up (what `npm update` moves to); write `1.3.0` to pin exactly.
+- `npm ci` (CI, `setup.sh`) installs exactly what the lockfile records, so a version only changes when someone commits a change.
+- The lockfile in this repo records the version of each `@automation/*` package but not where it came from. The first `npm install` against the real registry adds that (`resolved` and `integrity`); commit the result.
+- A package that is itself depended on (`utils`, `api`, `ui`, `sap`) must be published again before its consumers can ask for the new version - see [Publishing a package](#publishing-a-package-to-the-registry-jfrog-artifactory) in that repo.
+
+## Using a package without a registry (local generation)
+
+Use this when the packages are not in a registry yet, or you want to try a change before publishing it. Nothing in `package.json` or the lockfile changes.
+
+**Automatic - when the repos are checked out next to each other:**
+
+```bash
+./scripts/setup.sh --local          # Windows: scripts\setup.bat --local
+```
+
+It builds the sibling repos this one depends on (`referenced-automation-utils`, `referenced-automation-api`, `referenced-automation-ui`, `referenced-automation-sap`) with their own `scripts/create-package.sh --local`, keeps the `.tgz` files in `../shared-packages` and installs them.
+
+**Manual - generating a tarball and placing it yourself** (for example when the consuming repo is on another machine):
+
+1. Generate a tarball of each package this repo needs, in that package's own repo (`--local` builds what it depends on in turn, without needing the registry):
+   ```bash
+   (cd ../referenced-automation-utils && ./scripts/create-package.sh --local)
+   (cd ../referenced-automation-api && ./scripts/create-package.sh --local)
+   (cd ../referenced-automation-ui && ./scripts/create-package.sh --local)
+   (cd ../referenced-automation-sap && ./scripts/create-package.sh --local)
+   ```
+   Each file is named `automation-<package>-<version>.tgz` after the version in that repo's `package.json` and lands in `../shared-packages`.
+2. Leave the files in `../shared-packages`, or copy them into the consuming repo (any folder works, for example `libs/` - keep it out of git).
+3. Install them, all in one command (change the folder if you copied the files elsewhere):
+   ```bash
+   npm install --no-save ../shared-packages/automation-referenced-automation-utils-<version>.tgz ../shared-packages/automation-referenced-automation-api-<version>.tgz ../shared-packages/automation-referenced-automation-ui-<version>.tgz ../shared-packages/automation-referenced-automation-sap-<version>.tgz
+   ```
+   `--no-save` keeps `package.json` and the lockfile unchanged. Run it again after every `npm ci`, because `npm ci` removes what is not in the lockfile. When you rebuild a tarball with the same version, run the command again to pick up the new contents.
+4. Build and test as usual (`npm run build`, `npm test`).
+
+When you are done experimenting, run `npm ci` to go back to what the registry provides.
 
 ## Environments
 
