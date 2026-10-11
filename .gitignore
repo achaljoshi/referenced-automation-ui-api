@@ -56,3 +56,6 @@ out/
 
 # fortnightly audit output (keep it between audits; see referenced-automation-utils docs/governance/AUDIT.md)
 audit-reports/
+
+# the remote-desktop mailbox (requests and replies; see referenced-automation-utils docs/REMOTE_DESKTOP.md)
+.remote-mailbox/

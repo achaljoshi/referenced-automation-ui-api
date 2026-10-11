@@ -13,6 +13,7 @@
 - `tests/generated/ui` and `tests/converters.spec.ts` compare with the **installed** `referenced-automation-ui` converter: when a UI release with the new converter header is installed, re-run `npm run convert:ui`.
 
 ### Added
+- **Worked example for a remote desktop host**: `tests/remoteHost.spec.ts` (UI steps in the browser, API and database steps on the RDP host through the remote-desktop utility, against its stand-in agent; NOT VERIFIED on a real RDP host) and a README section.
 - **Order-to-cash across SAP GUI, REST API, database and SFTP**, traced by one correlation id (`tests/orderToCash.spec.ts`, reusable flow steps, SAP page objects, a landscape stand-in, reconciliation, negative controls).
 - **Gherkin / BDD** (`playwright-bdd` 9.2.1): scenarios mixing SAP, UI and API steps with one shared `vars` (`features/hybrid-login.feature`: log in through the API and the browser is signed in; `features/order-to-cash.feature`: an order number remembered from SAP is `{{order}}` to the API step that polls the fulfilment service; the sales-order feature), one test merging the SAP, UI and API tests, `npm run test:bdd`.
 - **Converters wired in**: `npm run convert:ui` (`ui-codegen-to-playwright`) and `npm run convert:api` (`api-curl-to-playwright`) with worked examples (`recordings/`, `curl/`), their output committed and run in `tests/generated/`, and `tests/converters.spec.ts` guarding against drift.

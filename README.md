@@ -199,6 +199,26 @@ It builds the sibling repos this one depends on (`referenced-automation-utils`, 
 
 When you are done experimenting, run `npm ci` to go back to what the registry provides.
 
+## UI here, API / database / SAP on a remote desktop
+
+When the UI app is reachable from the machine that runs the tests (for example an AWS WorkSpace) but the APIs, the database and SAP GUI are reachable only from a remote RDP host, one test can still do all of it: the UI steps run in the browser on the test machine, and the other steps run on the RDP host through the remote-desktop utility in `referenced-automation-utils` (`docs/REMOTE_DESKTOP.md`).
+
+```
+your laptop --> AWS WorkSpace (tests + browser run here) --RDP--> RDP host (helper + SAP GUI; reaches the DB and the APIs)
+```
+
+Put the login in `.env.<env>.local` (never committed): `REMOTE_ENABLED=true`, `REMOTE_RDP_HOST`, `REMOTE_RDP_USER`, `REMOTE_RDP_PASSWORD`, plus `REMOTE_DB_PROVIDER` / `REMOTE_DB_CONNECTION_STRING` for database steps. Then:
+
+```ts
+const host = await remote.getRemoteHost();                         // logs in over RDP once per worker; undefined when REMOTE_ENABLED is off
+const remoteApi = new ApiClient(new RemoteRequestContext(host!).asApiRequestContext(), 'http://api.internal');  // API calls made FROM the RDP host
+const db = new remote.RemoteDbClient(host!);                       // SQL run ON the RDP host
+```
+
+or, with no code change, `API_VIA_REMOTE=true` makes the API fixtures (`apiClient`, `apiFor`) call from the RDP host, and `SAP_GUI_TRANSPORT=remote` runs the SAP steps through the bridge inside the RDP session (see the `-api` and `-sap` READMEs).
+
+`tests/remoteHost.spec.ts` is a worked example: a UI step in the browser, API calls made from the remote host, a database step on it, and the clear failure when the remote agent stops. It runs against the utility's stand-in agent, so it proves the wiring and **not** a real RDP session (NOT VERIFIED on a real host: run `npx automation-remote check` on your machine first).
+
 ## Environments
 
 Same `.env.<name>` + `ENV=<name>` pattern as the rest of this family (see `referenced-automation-utils`'s README). This repo's own tests spin up an in-process server and don't read `BASE_URL`/`API_BASE_URL` themselves - they're here as the template a real hybrid project's env files follow.
