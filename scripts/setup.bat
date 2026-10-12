@@ -12,7 +12,7 @@ REM It builds the sibling repos this one depends on (referenced-automation-utils
 REM files in ..\shared-packages and installs those instead. Nothing in package.json or package-lock.json changes. The
 REM sibling repos must be checked out next to this one. (USE_LOCAL_PACKAGES=1 does the same.)
 REM
-REM Usage: scripts\setup.bat [--local]
+REM Usage: scripts\setup.bat [--local]      (PowerShell: .\scripts\setup.bat [--local] - the .\ is required there)
 REM ============================================================================
 setlocal enabledelayedexpansion
 cd /d "%~dp0\.."
@@ -64,7 +64,9 @@ if "%PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD%"=="1" (
   echo.
   echo == Skipping Playwright browser download ^(PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1^) ==
   echo Set BROWSER to a system-installed browser channel instead, e.g.:
-  echo   set BROWSER=msedge ^&^& npm test   ^(or BROWSER=chrome^)
+  echo   PowerShell:  $env:BROWSER = "msedge"; npm test
+  echo   cmd.exe:     set BROWSER=msedge ^&^& npm test
+  echo   ^(use chrome instead of msedge for Google Chrome^)
 ) else (
   echo.
   echo == Installing Playwright browsers =====================================
