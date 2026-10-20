@@ -23,6 +23,7 @@
 - `typecheck` and `security` scripts and pipeline job.
 
 ### Changed
+- **tsconfig works with TypeScript 7**: `"module": "node16"` and `"moduleResolution": "node16"` replace `commonjs` / `node` (TypeScript 7 removed `moduleResolution: node` and stops with TS5108). The compiled JavaScript is identical; checked with TypeScript 5.9.3 and 7.0.2. The fortnightly audit flags the old setting (`tsconfig-removed-option`).
 - `scripts/setup.bat` prints the PowerShell form (`$env:BROWSER = "msedge"; npm test`) next to the cmd.exe one when the browser download is skipped; the committed `.env.dev` / `.env.qa` / `.env.stage` say that `LOG_LEVEL` in a `.env` file has no effect (the logger reads the real environment only).
 - README: the converters section says the bins come from the dependencies (`npm run convert:ui -- <args>` and `npx ui-codegen-to-playwright <args>` both work); the stale "`npm run build`" step is gone (this repo has no build).
 - **`@automation/*` dependencies are version ranges (`^1.0.0`)**, installed from the registry in `NPM_REGISTRY_URL` (`setup` runs `npm config set registry` first); `setup.sh --local` installs locally built tarballs instead. The pipeline no longer clones sibling repos. README: upgrading, local generation.
