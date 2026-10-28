@@ -253,9 +253,9 @@ test.describe('negative controls: each check reports a bad input', () => {
   });
 
   test('a backslash path after playwright test is flagged, a forward-slash path is not', () => {
-    expect(backslashTestPaths('npx playwright test tests\\hybridSession.spec.ts')).toHaveLength(1);
+    expect(backslashTestPaths('npx playwright test tests\\converters.spec.ts')).toHaveLength(1);
     expect(backslashTestPaths('x\nnpx playwright test --project=chromium tests\\a\\b.spec.ts')).toEqual(['line 2: npx playwright test --project=chromium tests\\a\\b.spec.ts']);
-    expect(backslashTestPaths('npx playwright test tests/hybridSession.spec.ts')).toEqual([]);
+    expect(backslashTestPaths('npx playwright test tests/converters.spec.ts')).toEqual([]);
     expect(backslashTestPaths('npx playwright test -g "title"')).toEqual([]);
   });
 });

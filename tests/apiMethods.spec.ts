@@ -6,7 +6,7 @@ import { ApiClient, MockServer, mockApiRoute, registerApiSteps } from '@automati
  * pagination, XML, recording and playback ...). All this repo needs to know is that what IT composes - `ApiClient` on a
  * Playwright request context, `MockServer`, `mockApiRoute`, the Gherkin steps - resolves from the installed package and
  * makes one real round trip. Deliberately not tagged @smoke. (`mockApiRoute` in a UI test is demoed in
- * mockedProfile.spec.ts; the hybrid session in hybridSession.spec.ts.)
+ * features/mocked-profile.feature; the hybrid session in features/hybrid-login.feature.)
  */
 test.describe('api: what this repo builds on', () => {
   test('ApiClient talks to a MockServer over a real request; the steps and route mocking are exported', async () => {

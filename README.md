@@ -1,6 +1,6 @@
 # referenced-automation-ui-api
 
-Composes [`referenced-automation-ui`](../referenced-automation-ui), [`referenced-automation-api`](../referenced-automation-api), and [`referenced-automation-utils`](../referenced-automation-utils) as plain npm dependencies - **zero duplicated framework code**. This repo's only original content is glue: a tiny sample server, a page object, and specs proving both frameworks work together in one test - including sharing session state between an API-driven step and a UI step with no manual token copy-pasting, and mocking a UI page's runtime API data with a helper imported from the API package.
+Composes [`referenced-automation-ui`](../referenced-automation-ui), [`referenced-automation-api`](../referenced-automation-api), and [`referenced-automation-utils`](../referenced-automation-utils) as plain npm dependencies - **zero duplicated framework code**. This repo's only original content is glue: a tiny sample server, a few steps of its own, and Gherkin scenarios (plus a handful of plain specs, see [Where the behaviours live](#where-the-behaviours-live)) proving both frameworks work together in one test - including sharing session state between an API-driven step and a UI step with no manual token copy-pasting, and mocking a UI page's runtime API data with a helper imported from the API package.
 
 ## Why this repo is almost entirely glue
 
@@ -22,19 +22,19 @@ test('an API-issued session cookie is honoured by the UI', async ({ page, contex
 });
 ```
 
-No `document.cookie` scripting, no `context.addCookies()` bookkeeping - the session genuinely is one session, not two synchronised ones. See `tests/hybridSession.spec.ts` for the full working example (including the negative cases: no login → anonymous state, failed login → no session granted).
+No `document.cookie` scripting, no `context.addCookies()` bookkeeping - the session genuinely is one session, not two synchronised ones. The same flow as a Gherkin scenario is `features/hybrid-login.feature` (including the negative cases: no login → anonymous state, failed login → no session granted); the API client is built on `context.request` in `features/steps/fixtures.ts`.
 
-**The sample server checks the session itself**, so these tests can fail for the right reason. `POST /login` issues a *different* signed session per login (a random id, the user and an expiry, signed with a key) as an `HttpOnly` cookie; `dashboard.html` is rendered for whatever session the server finds and `/api/profile` answers 401 without a valid one. A forged, expired or missing cookie gets the anonymous page - `tests/sessionValidation.spec.ts` proves each (forged constant, tampered payload, someone else's signature, expiry with the server's clock moved on, a login the browser never received, two logins giving two sessions) and `tests/storageState.spec.ts` proves the saved login is worthless to a server that did not issue it. The default signing key is random per checkout (`.auth/session.key`, git-ignored; `AUTH_SESSION_KEY` overrides it): one key shared by every sample server is what lets the session saved by the `setup` project - a server that no longer exists - be recognised later, because the server checks the signature rather than remembering the login. `server.seen` records what the server made of each request's cookie, so a test can assert the cookie really was sent.
+**The sample server checks the session itself**, so these tests can fail for the right reason. `POST /login` issues a *different* signed session per login (a random id, the user and an expiry, signed with a key) as an `HttpOnly` cookie; `dashboard.html` is rendered for whatever session the server finds and `/api/profile` answers 401 without a valid one. A forged, expired or missing cookie gets the anonymous page - `features/session-validation.feature` proves each (forged constant, tampered payload, someone else's signature, expiry with the server's clock moved on, a login the browser never received, two logins giving two sessions, the cookie is `HttpOnly`) and `features/saved-login.feature` proves the saved login is worthless to a server that did not issue it. The default signing key is random per checkout (`.auth/session.key`, git-ignored; `AUTH_SESSION_KEY` overrides it): one key shared by every sample server is what lets the session saved by the `setup` project - a server that no longer exists - be recognised later, because the server checks the signature rather than remembering the login. `server.seen` records what the server made of each request's cookie, so a scenario can assert the cookie really was sent (`Then the server recognised the session on the dashboard as "valid"`).
 
 ## Log in once, start every test logged in
 
-`tests/auth.setup.ts` logs in by API once and saves the browser state to `.auth/user.json` (git-ignored - it is a credential). `playwright.config.ts` passes `auth: { setupMatch, storageState }` to the shared `createPlaywrightConfig`, which adds a `setup` project and makes every browser project start with that state. `tests/storageState.spec.ts` shows a test that does no login of its own.
+`tests/auth.setup.ts` logs in by API once and saves the browser state to `.auth/user.json` (git-ignored - it is a credential). `playwright.config.ts` passes `auth: { setupMatch, storageState }` to the shared `createPlaywrightConfig`, which adds a `setup` project and makes every browser project start with that state. `features/saved-login.feature` shows a scenario that does no login of its own.
 
-A test that needs a clean browser - the anonymous state, or doing the login itself - opts out with `test.use({ storageState: ANONYMOUS })` (see `hybridSession.spec.ts`).
+The Gherkin scenarios run in the `bdd` project, which has no saved login: every scenario starts with a clean browser (the anonymous state, or doing the login itself) and one that wants the saved login says so with `Given I start already logged in with the login saved by the setup project` (the `bdd` project depends on `setup`, so the file exists). A plain spec that needs a clean browser in a browser project opts out with `test.use({ storageState: ANONYMOUS })` (see `tests/support/generatedTest.ts`).
 
 ## One scenario across SAP GUI, API, database and SFTP
 
-`tests/orderToCash.spec.ts` is the worked example of a cross-system flow - and its tests are **harness self-tests**: the SAP GUI is the simulator and the test itself calls `landscape.deliver(...)` (awaited) with data it built from what it typed, so a green run proves the harness can create an order, read it back from every system, tie them together with one correlation id and report a disagreement or a *missing delivery* (one test per system left out: database, SFTP, fulfilment API) - not that a real SAP interface delivers. Only the simulator's order number is independent of the test. Against a real landscape, drop the `deliver()` call and keep `collectTrace` / `reconcile`. The order is registered in the SAP data registry as **kept**, not cleaned (nothing here undoes it); a real project passes `{ cleanup }` to `createOrderInSap`.
+`features/order-to-cash-trace.feature` is the worked example of a cross-system flow - and its scenarios are **harness self-tests**: the SAP GUI is the simulator and the scenario itself calls the stand-in interface (`the order interface delivers the order ... as SAP saved it`, which awaits `landscape.deliver(...)`) with data it built from what it typed, so a green run proves the harness can create an order, read it back from every system, tie them together with one correlation id and report a disagreement or a *missing delivery* (one example per system left out: database, SFTP, fulfilment API) - not that a real SAP interface delivers. Only the simulator's order number is independent of the test. Against a real landscape, drop the "delivers" steps and keep the read-back and reconciliation steps (`collectTrace` / `reconcile`). The order is registered in the SAP data registry as **kept**, not cleaned (nothing here undoes it); a real project passes `{ cleanup }` to `createOrderInSap`; the scenario "registered as KEPT, not cleaned" says so.
 
 The flow: look up a price over REST, create a sales
 order in SAP GUI, then read the order back from the database, the SFTP drop and the fulfilment API and check they all
@@ -44,8 +44,9 @@ be followed through every system by searching for one value.
 
 | Piece | Where |
 |---|---|
-| the scenario | `tests/orderToCash.spec.ts` |
-| the reusable steps (`lookUpPrice`, `createOrderInSap`, `collectTrace`, `reconcile`) - each a `test.step` | `tests/support/flows/orderToCash.ts` |
+| the scenarios | `features/order-to-cash-trace.feature` |
+| the Gherkin steps over the flow (`I create the sales order ...`, `I read the order ... back ...`, `the systems agree with SAP ...`) | `features/steps/orderSteps.ts`, `features/steps/support/orders.ts` |
+| the reusable flow (`lookUpPrice`, `createOrderInSap`, `collectTrace`, `reconcile`) - each a `test.step` | `tests/support/flows/orderToCash.ts` |
 | the SAP screens as page objects | `tests/support/sap/pages.ts` |
 | the stand-in for the order interface and the three systems it feeds | `tests/support/orderLandscape.ts` |
 
@@ -66,7 +67,8 @@ Scenarios that mix SAP, the web UI and APIs, in business language, with one voca
 | API sentences (`I send a POST request to "/login" with JSON:`, `the response status is 200`) | `registerApiSteps` in `@automation/referenced-automation-api` |
 | SAP sentences (`I open transaction "VA01"`, `I remember the number from the status bar ... as "order"`) | `registerSapSteps` in `@automation/referenced-automation-sap` |
 | data sentences (`I generate a random email called "login"`, `the variable "x" matches "..."`) | `registerDataSteps` (UI and API packages carry the same one - register it once) |
-| the scenarios | `features/hybrid-login.feature`, `features/order-to-cash.feature`, `features/sap-sales-order.feature` |
+| the scenarios | `features/hybrid-login.feature`, `features/session-validation.feature`, `features/saved-login.feature`, `features/mocked-profile.feature`, `features/remote-host.feature`, `features/order-to-cash.feature`, `features/order-to-cash-trace.feature`, `features/sap-sales-order.feature` |
+| this project's own steps and the scenario state behind them (the sample server's sessions, the remote host, the order trace) | `features/steps/sessionSteps.ts`, `remoteSteps.ts`, `orderSteps.ts`, `features/steps/support/` |
 | wiring: ONE test that merges the SAP, UI and API tests, and where to add this project's own steps | `features/steps/fixtures.ts`, `features/steps/steps.ts` |
 | config: its own `bdd` project; `bddgen` turns features into runnable tests in `.features-gen/` (git-ignored) | `playwright.config.ts` |
 
@@ -90,9 +92,35 @@ npm run test:bdd      # bddgen && playwright test --project=bdd   (npm test / te
 
 The features run against in-process stand-ins (SAP simulator, the sample web server, the order landscape) so they work anywhere; for real systems remove the overrides in `features/steps/fixtures.ts` (they also fill in `SAP_USER`, `SAP_PASSWORD` and `SAP_CLIENT`, and a value set there beats a `.env` file) and the `sapGuiMode: 'attach'` pin of the `bdd` project in `playwright.config.ts`, then set `SAP_GUI_MODE` / `BASE_URL` / `API_BASE_URL` (see [Configuration reference](#configuration-reference)).
 
-## Converting recordings and curl commands
+## Where the behaviours live
 
-(`tests/utilsMethods.spec.ts` and `tests/apiMethods.spec.ts` are thin import checks - the utils and API packages test their own methods in their own repos - and are deliberately not tagged `@smoke`.)
+Every behaviour of the sample landscape is a Gherkin scenario in `features/`; the plain Playwright specs left in `tests/` test the framework itself, not a behaviour (and `tests/support/` holds what both use).
+
+| Behaviour | Feature | Tags |
+|---|---|---|
+| an API login is honoured by the page; no login or a refused login leaves it anonymous; the page shows what the API serves and a mocked answer replaces it | `features/hybrid-login.feature` | `@smoke` / `@regression` per scenario |
+| forged, expired and never-received cookies; one session per login; `HttpOnly` | `features/session-validation.feature` | `@regression` |
+| a scenario that starts from the saved login, and a server that did not issue it | `features/saved-login.feature` | `@smoke`, `@regression` |
+| the real `/api/profile` answer, and `mockApiRoute` replacing it | `features/mocked-profile.feature` | `@smoke` |
+| UI in the browser, API and database on a remote host (stand-in agent), and the agent stopping | `features/remote-host.feature` | `@e2e`, `@regression` |
+| an order saved in SAP read back from the database, SFTP and fulfilment API; a disagreement, a missing delivery, two orders, the kept order | `features/order-to-cash-trace.feature` | `@e2e` |
+| an order created in SAP reaches the fulfilment API | `features/order-to-cash.feature` | `@e2e` |
+| sales orders in SAP | `features/sap-sales-order.feature` | `@sapgui @smoke` |
+
+Plain specs that stay, and why they are not scenarios:
+
+| Spec | Why it stays a plain spec |
+|---|---|
+| `tests/envDocs.spec.ts`, `tests/windowsDocs.spec.ts` | documentation drift guards with negative controls (text and files, no product behaviour) |
+| `tests/converters.spec.ts` | drift check of the two converters' output against `tests/generated/` |
+| `tests/generated/ui`, `tests/generated/api` | the converters' committed output, run as the converters make it (the point is that it is what the converter produces) |
+| `tests/utilsMethods.spec.ts`, `tests/apiMethods.spec.ts` | thin "does the installed package resolve and work" import checks (the utils and API packages test their own methods in their own repos); deliberately not tagged `@smoke` |
+| `tests/sapHelpers.spec.ts` | the SAP package's `byControlId` / `waitForUI5Ready` library functions on a fixture page |
+| `tests/auth.setup.ts` | the `setup` project that saves the login |
+
+`npm run test:smoke` and `npm run test:regression` select scenarios and specs by the same tags as before; the scenarios run in the `bdd` project only (Chromium by default, once in the `bdd` CI job), the specs in every browser project.
+
+## Converting recordings and curl commands
 
 Both converters ship in the packages this repo depends on, so they are here already: this repo has no `bin` of its own, but the `bin` entries of its dependencies are linked into `node_modules/.bin` by `npm install`/`npm ci` (`ui-codegen-to-playwright` from the UI package, `api-curl-to-playwright` from the API package, `automation-remote`, `automation-scan-secrets` ... from utils), and `npm run` and `npx` both look there - on Windows too.
 
@@ -129,7 +157,7 @@ test('mockApiRoute overrides the same fetch call with mock data instead', async 
 });
 ```
 
-See `tests/mockedProfile.spec.ts` for the full working example - `tests/support/authServer.ts`'s `profile.html` fetches `/api/profile` at runtime; one test asserts against the real endpoint's response, the other overrides it with `mockApiRoute` and asserts the mocked value renders instead. See `referenced-automation-api`'s own README ([Mocking](../referenced-automation-api/README.md#mocking)) for the other two mocking tools it ships (`MockServer` for API-level tests, `recordApiTraffic`/`playApiRecording` for record-once-replay-forever).
+See `features/mocked-profile.feature` for the full working example (the step `Given the profile API is mocked, with mockApiRoute, to answer the name "Mocked Ada"` in `features/steps/sessionSteps.ts` is the snippet above) - `tests/support/authServer.ts`'s `profile.html` fetches `/api/profile` at runtime; one scenario asserts against the real endpoint's response, the other overrides it with `mockApiRoute` and asserts the mocked value renders instead. `features/hybrid-login.feature` does the same with the UI package's own `the request to "..." returns JSON:` step. See `referenced-automation-api`'s own README ([Mocking](../referenced-automation-api/README.md#mocking)) for the other two mocking tools it ships (`MockServer` for API-level tests, `recordApiTraffic`/`playApiRecording` for record-once-replay-forever).
 
 ## Quick start
 
@@ -164,7 +192,7 @@ In PowerShell the `.\` is required (`scripts\setup.bat` works only in `cmd.exe`)
 
 ```powershell
 npm test                                          # everything: bddgen (the Gherkin features), then playwright test
-npx playwright test tests/hybridSession.spec.ts   # one file
+npx playwright test tests/converters.spec.ts      # one file
 npx playwright test -g "forged"                   # one title (a part of it is enough)
 npx playwright test --project=chromium            # one project
 npm run test:bdd                                  # only the Gherkin features
@@ -186,7 +214,7 @@ On a locked-down machine that cannot download browsers, install with `$env:PLAYW
 | `'tsc' is not recognized`, `'bddgen' is not recognized`, `'playwright' is not recognized`, or there is no `node_modules` folder | the install did not run or failed | run `.\scripts\setup.bat` again and read its FIRST error: the later ones are consequences |
 | `The term 'scripts\setup.bat' is not recognized` | PowerShell does not run files from the current folder without a path | `.\scripts\setup.bat` |
 | `Cannot find module '@automation/...'` or `Cannot find module '...dist...'` | a dependency is not installed or not built | run the setup script; `.\scripts\setup.bat --local` builds the sibling repos first (check that `node_modules\@automation\referenced-automation-utils\dist` exists) |
-| `No tests found` | the path pattern matched nothing: a backslash path, another folder, a file that is not a `*.spec.ts` | `npx playwright test tests/hybridSession.spec.ts` (forward slashes) or `-g "title"`; run it from the repo root; the Gherkin features need `bddgen` first, which `npm test` and `npm run test:bdd` run for you |
+| `No tests found` | the path pattern matched nothing: a backslash path, another folder, a file that is not a `*.spec.ts` | `npx playwright test tests/converters.spec.ts` (forward slashes) or `-g "title"`; run it from the repo root; the Gherkin features need `bddgen` first, which `npm test` and `npm run test:bdd` run for you |
 | `error TS5108: Option 'moduleResolution=node10' has been removed` in `tsconfig.json` (VS Code or a machine with TypeScript 7) | TypeScript 7 removed `moduleResolution: "node"`; it has nothing to do with the Node.js version | `tsconfig.json` now uses `"module": "node16"` and `"moduleResolution": "node16"` (same compiled output): `git pull`, or change those two lines by hand |
 | `Illegal characters in path` mentioning `*.tgz` | an old `clean` script in a sibling repo, which `--local` builds | fixed there (the script is `rimraf --glob dist "*.tgz"`): pull that repo and run `.\scripts\setup.bat --local` again |
 | `Executable doesn't exist ... npx playwright install` | the browsers are not installed | `npx playwright install` (or `npm run install:browsers`); on a locked-down machine `$env:BROWSER = "msedge"` (or `chrome`) uses the browser that is already there |
@@ -296,7 +324,7 @@ const db = new remote.RemoteDbClient(host!);                       // SQL run ON
 
 or, with no code change, `API_VIA_REMOTE=true` makes the API fixtures (`apiClient`, `apiFor`) call from the RDP host, and `SAP_GUI_TRANSPORT=remote` runs the SAP steps through the bridge inside the RDP session (see the `-api` and `-sap` READMEs).
 
-`tests/remoteHost.spec.ts` is a worked example: a UI step in the browser, API calls made from the remote host, a database step on it, and the clear failure when the remote agent stops. It runs against the utility's stand-in agent, so it proves the wiring and **not** a real RDP session (NOT VERIFIED on a real host: run `npx automation-remote check` on your machine first).
+`features/remote-host.feature` is a worked example: a UI step in the browser, API calls made from the remote host, a database step on it, and the clear failure when the remote agent stops. It runs against the utility's stand-in agent, so it proves the wiring and **not** a real RDP session (NOT VERIFIED on a real host: run `npx automation-remote check` on your machine first).
 
 ## Environments
 

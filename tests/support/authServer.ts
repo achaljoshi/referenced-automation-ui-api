@@ -124,8 +124,9 @@ const FIORI_STYLE_HTML = `<!DOCTYPE html>
  * step and a UI step: POST /login issues a signed session (a random id, the user and an expiry, signed with the server's
  * key) as an HttpOnly `session` cookie, and the server itself checks that cookie - for dashboard.html (rendered for the
  * session it finds), for /api/profile (401 without a valid one) - so a forged, expired or missing cookie gets the
- * anonymous page, never the welcome. See tests/hybridSession.spec.ts for how the two layers connect (context.request shares
- * its cookie jar with the browser context it belongs to) and tests/sessionValidation.spec.ts for what it must reject.
+ * anonymous page, never the welcome. See features/hybrid-login.feature for how the two layers connect (the API client is built on
+ * context.request, which shares its cookie jar with the browser context it belongs to) and features/session-validation.feature
+ * for what it must reject.
  */
 export function startAuthServer(options: AuthServerOptions = {}): Promise<AuthServerHandle> {
   const key = options.signingKey ?? loadSigningKey();
@@ -179,7 +180,7 @@ export function startAuthServer(options: AuthServerOptions = {}): Promise<AuthSe
     }
 
     // The real (unmocked) endpoint the page above fetches at runtime - it needs a valid session; see
-    // tests/mockedProfile.spec.ts for overriding it with mockApiRoute() instead of hitting this real handler.
+    // features/mocked-profile.feature for overriding it with mockApiRoute() instead of hitting this real handler.
     if (req.method === 'GET' && req.url === '/api/profile') {
       const session = sessionOf(req, '/api/profile');
       if (session.state !== 'valid') {

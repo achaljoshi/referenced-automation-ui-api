@@ -90,7 +90,8 @@ build:
 
 # One leg per browser. `--project=$BROWSER` runs that browser's project (and the `setup` login it depends on): the `bdd`
 # project that createPlaywrightConfig appends has no browser of its own, so it must not run in a leg that installed a
-# different one - the Gherkin features (which include the accessibility step) run once, in the `bdd` job below.
+# different one - the Gherkin features (every behaviour of the sample landscape, the accessibility step included) run once, in the
+# `bdd` job below. The legs run the plain specs that remain in tests/ (drift guards, converters, import checks, setup).
 test:
   stage: test
   needs: ["build"]
