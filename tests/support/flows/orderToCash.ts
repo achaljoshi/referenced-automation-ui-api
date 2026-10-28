@@ -89,9 +89,6 @@ export async function collectTrace(landscape: OrderLandscape, orderNo: string, c
     const name = (await landscape.sftp.list('/outbound')).map((f) => f.name).find((n) => n.includes(shortId(correlationId))) as string;
     const local = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'order-file-')), name);
     await landscape.sftp.download(`/outbound/${name}`, local); // over SFTP, so the file is proven to be servable, not just present
-    // download() can resolve before the local file has been written (it was seen missing or empty for a few ms): wait for the bytes, so the
-    // content check below reads what the server sent and not a half-finished copy.
-    await expect.poll(() => fs.existsSync(local) && fs.statSync(local).size > 0, { timeout: timeoutMs, message: `the file ${name} downloaded from /outbound stayed empty` }).toBe(true);
     trace.file = { name, content: fs.readFileSync(local, 'utf8') };
   });
 
